@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useKV } from '@github/spark/hooks'
 import { BlogHeader } from './components/BlogHeader'
 import { PostCard } from './components/PostCard'
+import { PostView } from './components/PostView'
 import { LoginModal } from './components/LoginModal'
 import { PostEditor } from './components/PostEditor'
 import { EmptyState } from './components/EmptyState'
@@ -13,6 +14,8 @@ function App() {
   const [showLogin, setShowLogin] = useState(false)
   const [showEditor, setShowEditor] = useState(false)
   const [editingPost, setEditingPost] = useState<Post | null>(null)
+  const [viewingPost, setViewingPost] = useState<Post | null>(null)
+  const [showPostView, setShowPostView] = useState(false)
 
   const handleCreatePost = (postData: Omit<Post, 'id' | 'createdAt'>) => {
     const newPost: Post = {
@@ -45,6 +48,24 @@ function App() {
   const startEdit = (post: Post) => {
     setEditingPost(post)
     setShowEditor(true)
+  }
+
+  const openPost = (post: Post) => {
+    setViewingPost(post)
+    setShowPostView(true)
+  }
+
+  const handlePostViewEdit = () => {
+    if (viewingPost) {
+      setEditingPost(viewingPost)
+      setShowEditor(true)
+    }
+  }
+
+  const handlePostViewDelete = () => {
+    if (viewingPost) {
+      handleDeletePost(viewingPost.id)
+    }
   }
 
   const sortedPosts = [...posts].sort((a, b) => 
@@ -81,6 +102,7 @@ function App() {
                 isAuthenticated={isAuthenticated}
                 onEdit={() => startEdit(post)}
                 onDelete={() => handleDeletePost(post.id)}
+                onReadMore={() => openPost(post)}
               />
             ))}
           </div>
@@ -101,6 +123,15 @@ function App() {
         onOpenChange={setShowEditor}
         post={editingPost}
         onSave={editingPost ? handleEditPost : handleCreatePost}
+      />
+
+      <PostView 
+        post={viewingPost}
+        open={showPostView}
+        onOpenChange={setShowPostView}
+        isAuthenticated={isAuthenticated}
+        onEdit={handlePostViewEdit}
+        onDelete={handlePostViewDelete}
       />
     </div>
   )
