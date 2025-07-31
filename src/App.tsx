@@ -8,6 +8,8 @@ import { PostEditor } from './components/PostEditor'
 import { EmptyState } from './components/EmptyState'
 import { Post } from './types/Post'
 
+type ViewState = 'list' | 'post'
+
 function App() {
   const [posts, setPosts] = useKV<Post[]>('military-blog-posts', [])
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -15,7 +17,7 @@ function App() {
   const [showEditor, setShowEditor] = useState(false)
   const [editingPost, setEditingPost] = useState<Post | null>(null)
   const [viewingPost, setViewingPost] = useState<Post | null>(null)
-  const [showPostView, setShowPostView] = useState(false)
+  const [currentView, setCurrentView] = useState<ViewState>('list')
 
   const handleCreatePost = (postData: Omit<Post, 'id' | 'createdAt'>) => {
     const newPost: Post = {
@@ -52,7 +54,12 @@ function App() {
 
   const openPost = (post: Post) => {
     setViewingPost(post)
-    setShowPostView(true)
+    setCurrentView('post')
+  }
+
+  const goBackToList = () => {
+    setViewingPost(null)
+    setCurrentView('list')
   }
 
   const handlePostViewEdit = () => {
@@ -65,6 +72,7 @@ function App() {
   const handlePostViewDelete = () => {
     if (viewingPost) {
       handleDeletePost(viewingPost.id)
+      goBackToList()
     }
   }
 
@@ -74,40 +82,54 @@ function App() {
 
   return (
     <div className="min-h-screen bg-background">
-      <BlogHeader 
-        isAuthenticated={isAuthenticated}
-        onLoginClick={() => setShowLogin(true)}
-        onNewPostClick={() => {
-          setEditingPost(null)
-          setShowEditor(true)
-        }}
-        onLogout={() => setIsAuthenticated(false)}
-      />
-      
-      <main className="container mx-auto px-4 py-12 max-w-4xl">
-        {posts.length === 0 ? (
-          <EmptyState 
+      {currentView === 'list' ? (
+        <>
+          <BlogHeader 
             isAuthenticated={isAuthenticated}
-            onCreateFirst={() => {
+            onLoginClick={() => setShowLogin(true)}
+            onNewPostClick={() => {
               setEditingPost(null)
               setShowEditor(true)
             }}
+            onLogout={() => setIsAuthenticated(false)}
           />
-        ) : (
-          <div className="space-y-8">
-            {sortedPosts.map(post => (
-              <PostCard 
-                key={post.id}
-                post={post}
+          
+          <main className="container mx-auto px-4 py-12 max-w-4xl">
+            {posts.length === 0 ? (
+              <EmptyState 
                 isAuthenticated={isAuthenticated}
-                onEdit={() => startEdit(post)}
-                onDelete={() => handleDeletePost(post.id)}
-                onReadMore={() => openPost(post)}
+                onCreateFirst={() => {
+                  setEditingPost(null)
+                  setShowEditor(true)
+                }}
               />
-            ))}
-          </div>
-        )}
-      </main>
+            ) : (
+              <div className="space-y-8">
+                {sortedPosts.map(post => (
+                  <PostCard 
+                    key={post.id}
+                    post={post}
+                    isAuthenticated={isAuthenticated}
+                    onEdit={() => startEdit(post)}
+                    onDelete={() => handleDeletePost(post.id)}
+                    onReadMore={() => openPost(post)}
+                  />
+                ))}
+              </div>
+            )}
+          </main>
+        </>
+      ) : (
+        viewingPost && (
+          <PostView 
+            post={viewingPost}
+            isAuthenticated={isAuthenticated}
+            onEdit={handlePostViewEdit}
+            onDelete={handlePostViewDelete}
+            onBack={goBackToList}
+          />
+        )
+      )}
 
       <LoginModal 
         open={showLogin}
@@ -123,15 +145,6 @@ function App() {
         onOpenChange={setShowEditor}
         post={editingPost}
         onSave={editingPost ? handleEditPost : handleCreatePost}
-      />
-
-      <PostView 
-        post={viewingPost}
-        open={showPostView}
-        onOpenChange={setShowPostView}
-        isAuthenticated={isAuthenticated}
-        onEdit={handlePostViewEdit}
-        onDelete={handlePostViewDelete}
       />
     </div>
   )
